@@ -4,14 +4,14 @@
 \alias{summary.sdem}
 \title{Summary of sdem class}
 \usage{
-\method{summary}{sdem}(object, extended = FALSE, ...)
+\method{summary}{sdem}(object, correlation = FALSE)
 
-\method{summary}{sdem}(object, extended = FALSE, ...)
+\method{summary}{sdem}(object, correlation = FALSE)
 }
 \arguments{
 \item{object}{an object of class 'sdem'.}
 
-\item{extended}{logical. if TRUE additional information is printed}
+\item{extended}{logical. if 'TRUE' the parameter correlation matrix is also printed.}
 
 \item{...}{further arguments passed to/from other methods.}
 }

@@ -22,6 +22,8 @@ sdem = R6Class(
     parameters = NULL,
     initial.state = NULL,
     tmb.initial.state = NULL,
+    tmb.initial.state.for.parameters = NULL,
+    iobs = NULL,
     # after algebraics
     sys.eqs.trans = NULL,
     obs.eqs.trans = NULL,
@@ -50,6 +52,7 @@ sdem = R6Class(
     linear = NULL,
     fixed.pars = NULL,
     free.pars = NULL,
+    trigger = NULL,
     # lengths
     n = NULL,
     m = NULL,
@@ -89,6 +92,7 @@ sdem$set("public","initialize",
            private$parameters = NULL
            private$initial.state = NULL
            private$tmb.initial.state = NULL
+           private$iobs = NULL
            # after algebraics
            private$sys.eqs.trans = NULL
            private$obs.eqs.trans = NULL
@@ -107,6 +111,7 @@ sdem$set("public","initialize",
            private$linear = NULL
            private$fixed.pars = NULL
            private$free.pars = NULL
+           private$trigger = NULL
            # names
            private$state.names = NULL
            private$obs.names = NULL
@@ -143,7 +148,7 @@ sdem$set("public","add_systems",
              # Function Body
            })
            # if model was already built, set compile flag to true
-           did_model_change_after_build(self, private)
+           was_model_already_built(self, private)
            #
            return(invisible(self))
          }
@@ -165,12 +170,10 @@ sdem$set("public","add_observations",
              check_name(names(res), "obs", self, private)
              private$obs.eqs[[names(res)]] = res[[1]]
              private$obs.names = names(private$obs.eqs)
-
-             # if model was already built, set compile flag to true
-             did_model_change_after_build(self, private)
              # Function Body
-           }
-           )
+           })
+           # if model was already built, set compile flag to true
+           was_model_already_built(self, private)
            #
            return(invisible(self))
          }
@@ -192,12 +195,10 @@ sdem$set("public","add_observation_variances",
              check_name(names(res), "obsvar", self, private)
              private$obs.var[[names(res)]] = res[[1]]
              private$obsvar.names = names(private$obs.var)
-
-             # if model was already built, set compile flag to true
-             did_model_change_after_build(self, private)
              # Function Body
-           }
-           )
+           })
+           # if model was already built, set compile flag to true
+           was_model_already_built(self, private)
            #
            return(invisible(self))
          }
@@ -219,14 +220,16 @@ sdem$set("public","add_inputs",
              # Function Body
              res = check_inputs(args, self, private)
              check_name(names(res), "input", self, private)
+             private$trigger = is_this_a_new_name(names(res),private$input.names)
              private$inputs[[names(res)]] = res[[1]]
              private$input.names = names(private$inputs)
-
-             # if model was already built, set compile flag to true
-             did_model_change_after_build(self, private)
              # Function Body
+           })
+           # if model was already built, set compile flag to true
+           if (private$trigger) {
+             was_model_already_built(self, private)
            }
-           )
+           #
            return(invisible(self))
          }
 )
@@ -235,24 +238,24 @@ sdem$set("public","add_parameters",
          function(parameters) {
            # Function Body
            parnames = check_parameters(parameters, self, private)[[1]]
-           lapply(parnames, function(par) check_name(par, "pars", self, private))
-           # store all
+           lapply(parnames, function(parname) check_name(parname, "pars", self, private))
+           private$trigger = any(sapply(parnames, function(parname) is_this_a_new_name(parname,private$parameter.names)))
            for (i in 1:nrow(parameters)) {
              private$parameters[[parnames[i]]] = list(init=parameters[i,1],
                                                       lb=parameters[i,2],
                                                       ub=parameters[i,3])
            }
            private$parameter.names = names(private$parameters)
-
            # store fixed parameters (those with NA bounds)
            bool = unlist(lapply(private$parameters, function(x) all(is.na(c(x[["lb"]],x[["ub"]])))))
            fixed.pars.names = private$parameter.names[bool]
            for(name in fixed.pars.names) {
              private$fixed.pars[[name]] = factor(NA)
            }
-
            # if model was already built, set compile flag to true
-           did_model_change_after_build(self, private)
+           if (private$trigger) {
+             was_model_already_built(self, private)
+           }
            # Function Body
            return(invisible(self))
          }
@@ -265,11 +268,10 @@ sdem$set("public","add_algebraics",
              res = check_algebraics(form, self, private)
              private$alg.eqs[[names(res)]] = res[[1]]
              # Function Body
-           }
-           )
-
+           })
            # if model was already built, set compile flag to true
-           did_model_change_after_build(self, private)
+           was_model_already_built(self, private)
+           #
            return(invisible(self))
          }
 )
@@ -280,13 +282,16 @@ sdem$set("public","add_constants",
              # Function Body
              res = check_constants(form, self, private)
              check_name(names(res), "constants", self, private)
+             private$trigger = is_this_a_new_name(names(res),private$constant.names)
              private$constants[[names(res)]] = res[[1]]
              private$constant.names = names(private$constants)
              # Function Body
-           }
-           )
+           })
            # if model was already built, set compile flag to true
-           did_model_change_after_build(self, private)
+           if (private$trigger) {
+             was_model_already_built(self, private)
+           }
+           #
            return(invisible(self))
          }
 )
@@ -600,8 +605,16 @@ sdem$set("public","print",
            }
            # if there are any state equations
            if (n>0) {
-             cat("Stochastic State Space Model:",private$modelname,"\n")
-             # cat(" State Space Model:\n")
+
+             basic.data = c(private$n,private$m,
+                            private$ng,p,par)
+             row.names = c("Number of States","Number of Observations",
+                           "Number of Diffusions","Number of Inputs",
+                           "Number of Parameters")
+             mat=data.frame(basic.data,row.names=row.names,fix.empty.names=F)
+             cat("A Stochastic State Space Model called",private$modelname,"\n")
+             print(mat,quote=FALSE)
+             #
              cat("\nSystem Equations:\n\n")
              lapply(private$sys.eqs,function(x) cat("\t",deparse1(x$form),"\n"))
            }
@@ -641,15 +654,15 @@ sdem$set("public","print",
              }
            }
            if (p>1) {
-             cat("\nInputs:\n\n")
-             cat("\t", paste(private$input.names[!private$input.names %in% "t"],collapse=", "),"\n\n")
+             cat("\nInputs:\n")
+             cat("\t", paste(private$input.names[!private$input.names %in% "t"],collapse=", "))
            }
            if (par>0) {
-             cat("\nParameters:\n\n")
+             cat("\n\nParameters:\n")
              cat("\t", paste(private$parameter.names,collapse=", "))
            }
            if (fixedpars>0) {
-             cat("\n\nFixed Parameters:\n\n")
+             cat("\n\nFixed Parameters:\n")
              cat("\t", paste(names(private$fixed.pars),collapse=", "))
            }
            return(invisible(self))
@@ -657,33 +670,34 @@ sdem$set("public","print",
 )
 
 sdem$set("public","summary",
-         function() {
-           # if we havent estimated yet
+         function(correlation=FALSE) {
+
+           # if we havent estimated anything tell user and quit
            if (is.null(private$fit)) {
              message("Please estimate your model to get information here")
              return(invisible(NULL))
            }
-           # if we have estimated print the coefficient matrix
-           if (!is.null(private$fit)) {
-             mat = cbind(private$fit$par.fixed,private$fit$sd.fixed,
-                         private$fit$tvalue,private$fit$Pr.tvalue)
-             colnames(mat) = c("Estimate","Std. Error","t value","Pr(>|t|)")
-             stats::printCoefmat(mat)
 
-             return(invisible(mat))
-           }
+           # if we have estimated
+           sumfit = summary(private$fit,correlation=correlation)
+           return(invisible(sumfit$parameters))
          }
 )
 
 
 sdem$set("public","plot",
-         function() {
-           if (is.null(private$opt)) {
-             return(NULL)
-           } else {
-             # plot(private$fit$residuals)
-             print("2+2 is 4")
+         function(plot.obs=1,use.ggplot=FALSE,extended=FALSE,ggtheme=getggplot2theme()){
+
+           # if we havent estimated anything tell user and quit
+           if (is.null(private$fit)) {
+             message("Please estimate your model in order to plot residuals")
+             return(invisible(NULL))
            }
+
+           # if we have estimated
+           plotlist = plot(private$fit, plot.obs=plot.obs, use.ggplot=use.ggplot,
+                           extended=extended,ggtheme=ggtheme)
+           return(invisible(plotlist))
          }
 )
 
@@ -839,5 +853,11 @@ sdem$set("public","get_build",
 sdem$set("public","get_tmb_init",
          function() {
            return(private$tmb.initial.state)
+         }
+)
+
+sdem$set("public","get_private",
+         function() {
+           return(private)
          }
 )

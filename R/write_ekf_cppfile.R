@@ -91,6 +91,7 @@ vector<Type> get_free_pars__(vector<int> mapints, int sum_mapints, vector<Type> 
 
   ##################################################
   # Construct drift function
+
   fvars0 = sort(unique(unlist(lapply(private$diff.terms, function(x) all.vars(x$dt)))))
   fvars1 = paste("Type", fvars0, collapse=", ")
   fvars2 = fvars0
@@ -340,20 +341,17 @@ vector<Type> get_free_pars__(vector<int> mapints, int sum_mapints, vector<Type> 
   # Misc
   txt = c(txt, sprintf("\n\t int n__ = %s;",private$n))
   txt = c(txt, sprintf("\t int m__ = %s;",private$m))
-
-  # txt = c(txt, "\t int k__ = 2*N__.sum()+1;")
-
   txt = c(txt, "\t int s__;")
   txt = c(txt,"\t Type nll__ = 0;")
 
   ##################################################
   # Storage variables
   txt = c(txt, "\n\t vector<vector<Type>> xPrior(t.size());")
-  txt = c(txt, "\t vector<vector<Type>> xPost(t.size());")
-  txt = c(txt, "\t vector<vector<Type>> xPriorPost(2*t.size());")
   txt = c(txt, "\t vector<matrix<Type>> pPrior(t.size());")
+  txt = c(txt, "\t vector<vector<Type>> xPost(t.size());")
   txt = c(txt, "\t vector<matrix<Type>> pPost(t.size());")
-  txt = c(txt, "\t vector<matrix<Type>> pPriorPost(2*t.size());")
+  # txt = c(txt, "\t vector<vector<Type>> xPriorPost(2*t.size());")
+  # txt = c(txt, "\t vector<matrix<Type>> pPriorPost(2*t.size());")
 
   # txt = c(txt, "\t vector<vector<Type>> xPrior_all(k__);")
   # txt = c(txt, "\t vector<matrix<Type>> pPrior_all(k__);")
@@ -378,10 +376,10 @@ vector<Type> get_free_pars__(vector<int> mapints, int sum_mapints, vector<Type> 
   txt = c(txt, "\t pPrior(0) = p0__;")
   txt = c(txt, "\t xPost(0) = x0__;")
   txt = c(txt, "\t pPost(0) = p0__;")
-  txt = c(txt, "\t xPriorPost(0) = x0__;")
-  txt = c(txt, "\t xPriorPost(1) = x0__;")
-  txt = c(txt, "\t pPriorPost(0) = p0__;")
-  txt = c(txt, "\t pPriorPost(1) = p0__;")
+  # txt = c(txt, "\t xPriorPost(0) = x0__;")
+  # txt = c(txt, "\t xPriorPost(1) = x0__;")
+  # txt = c(txt, "\t pPriorPost(0) = p0__;")
+  # txt = c(txt, "\t pPriorPost(1) = p0__;")
 
   ##################################################
   # Initiaze variables
@@ -464,8 +462,8 @@ vector<Type> get_free_pars__(vector<int> mapints, int sum_mapints, vector<Type> 
   txt = c(txt, "\t\t }")
   txt = c(txt, "\t\t xPost(i+1) = x0__;")
   txt = c(txt, "\t\t pPost(i+1) = p0__;")
-  txt = c(txt, "\t\t xPriorPost(2*i+3) = x0__;")
-  txt = c(txt, "\t\t pPriorPost(2*i+3) = p0__;")
+  # txt = c(txt, "\t\t xPriorPost(2*i+3) = x0__;")
+  # txt = c(txt, "\t\t pPriorPost(2*i+3) = p0__;")
   txt = c(txt, "\t }")
 
   ##################################################
@@ -500,10 +498,10 @@ vector<Type> get_free_pars__(vector<int> mapints, int sum_mapints, vector<Type> 
   txt = c(txt ,"\t REPORT(InnovationCovariance);")
   txt = c(txt ,"\t REPORT(xPrior);")
   txt = c(txt ,"\t REPORT(xPost);")
-  txt = c(txt, "\t REPORT(xPriorPost);")
   txt = c(txt, "\t REPORT(pPrior);")
   txt = c(txt, "\t REPORT(pPost);")
-  txt = c(txt, "\t REPORT(pPriorPost);")
+  # txt = c(txt, "\t REPORT(xPriorPost);")
+  # txt = c(txt, "\t REPORT(pPriorPost);")
   #
   # txt = c(txt, "\t REPORT(xPrior_all);")
   # txt = c(txt, "\t REPORT(pPrior_all);")

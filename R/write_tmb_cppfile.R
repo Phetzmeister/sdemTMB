@@ -119,11 +119,11 @@ vector<Type> get_free_pars__(vector<int> mapints, int sum_mapints, vector<Type> 
   hvars2 = hvars0
   input.names = private$input.names
   for(i in 1:length(private$input.names)){
-    hvars2 = sub(pattern=sprintf("^%s$",input.names[i]), replacement=sprintf("%s(i)",input.names[i]), x=hvars2)
+    hvars2 = sub(pattern=sprintf("^%s$",input.names[i]), replacement=sprintf("%s(j)",input.names[i]), x=hvars2)
   }
   state.names = private$state.names
   for(i in 1:length(private$state.names)){
-    hvars2 = sub(pattern=sprintf("^%s$",state.names[i]), replacement=sprintf("%s(Ncumsum__(i))",state.names[i]), x=hvars2)
+    hvars2 = sub(pattern=sprintf("^%s$",state.names[i]), replacement=sprintf("%s(Ncumsum__(j))",state.names[i]), x=hvars2)
   }
 
 
@@ -184,6 +184,10 @@ vector<Type> get_free_pars__(vector<int> mapints, int sum_mapints, vector<Type> 
   txt = c(txt, "\t DATA_VECTOR(dt__);")
   txt = c(txt, "\t DATA_IVECTOR(N__);")
   txt = c(txt, "\t DATA_IVECTOR(Ncumsum__);")
+  for (i in 1:private$m) {
+    nam = paste("iobs_",private$obs.names[i],sep="")
+    txt = c(txt, sprintf("\t DATA_IVECTOR(%s);",nam))
+  }
   # Loss parameters
   # txt = c(txt, "\t DATA_VECTOR(tukey_pars__);")
   # txt = c(txt, "\t DATA_INTEGER(which_loss__);")
@@ -206,6 +210,7 @@ vector<Type> get_free_pars__(vector<int> mapints, int sum_mapints, vector<Type> 
   # Likelihood
   txt = c(txt,sprintf("\n\t int n__ = %s;",private$n))
   txt = c(txt,sprintf("\t int ng__ = %s;",private$ng))
+  txt = c(txt,sprintf("\t int m__ = %s;",private$m))
   txt = c(txt,"\t Type nll__ = 0;")
 
   # Create variables
@@ -241,16 +246,32 @@ vector<Type> get_free_pars__(vector<int> mapints, int sum_mapints, vector<Type> 
   txt = c(txt, "\n\t ////////////////////////////////////////////////////////")
   txt = c(txt, "\t //////////// MAIN FOR-LOOP OVER OBSERVATIONS ///////////")
   txt = c(txt, "\t ////////////////////////////////////////////////////////")
-  txt = c(txt, "\t vector<Type> varDiag__;")
+  # txt = c(txt, "\t vector<Type> varDiag__;")
+  txt = c(txt, "\t matrix<Type> varDiag__(m__,t.size());")
   txt = c(txt, "\t for(int i=0 ; i<t.size() ; i++){")
-  txt = c(txt, sprintf("\t\t varDiag__ = obsvarFun__(%s);",paste(obsvars2,collapse=", ")))
-  for(i in 1:private$m){
-    txt = c(txt, sprintf("\t\t if(!isNA(%s(i))){",private$obs.names[i]))
-    txt = c(txt, sprintf("\t\t\t nll__ -= dnorm(%s,%s,sqrt(varDiag__(%s)),true);",paste(private$obs.names[i],"(i)",sep=""),
-                         hvars2[i],i-1))
-    txt = c(txt, "\t\t }")
-  }
+  txt = c(txt, sprintf("\t\t varDiag__.col(i) = obsvarFun__(%s);",paste(obsvars2,collapse=", ")))
   txt = c(txt, "\t }")
+  for(i in 1:private$m){
+    nam = paste("iobs_",private$obs.names[i],sep="")
+    txt = c(txt, sprintf("\t for(int i=0 ; i<%s.size() ; i++){",nam))
+    txt = c(txt, sprintf("\t\t int j = %s(i);",nam))
+    txt = c(txt, sprintf("\t\t nll__ -= dnorm(%s,%s,sqrt(varDiag__.col(j)(%s)),true);",paste(private$obs.names[i],"(j)",sep=""),
+                         hvars2[i],i-1))
+    # txt = c(txt, sprintf("\t\t varDiag__ = obsvarFun__(%s);",paste(obsvars2,collapse=", ")))
+    #
+    # txt = c(txt, sprintf("\t\t nll__ -= dnorm(%s,%s,sqrt(varDiag__(%s)),true);",paste(private$obs.names[i],"(j)",sep=""),
+    #                      hvars2[i],i-1))
+    txt = c(txt, "\t }")
+  }
+  # txt = c(txt, "\t for(int i=0 ; i<t.size() ; i++){")
+  # txt = c(txt, sprintf("\t\t varDiag__ = obsvarFun__(%s);",paste(obsvars2,collapse=", ")))
+  # for(i in 1:private$m){
+  #   txt = c(txt, sprintf("\t\t if(!isNA(%s(i))){",private$obs.names[i]))
+  #   txt = c(txt, sprintf("\t\t\t nll__ -= dnorm(%s,%s,sqrt(varDiag__(%s)),true);",paste(private$obs.names[i],"(i)",sep=""),
+  #                        hvars2[i],i-1))
+  #   txt = c(txt, "\t\t }")
+  # }
+  # txt = c(txt, "\t }")
 
   ##################################################
   # Maximum-A-Posterior

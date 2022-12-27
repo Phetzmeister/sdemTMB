@@ -2,7 +2,24 @@
 # CHECK EXISTENCE OF NAME FUNCTION
 #######################################################
 
+is_this_a_new_name = function(name, parameter_names) {
+  trigger=TRUE
+  if (name %in% parameter_names) {
+    trigger=FALSE
+  }
+  return(trigger)
+}
+
+#######################################################
+# CHECK EXISTENCE OF NAME FUNCTION
+#######################################################
+
 check_name = function(newvar, type, self, private) {
+  # This function checks if e.g. a newly defined state name is not already
+  # used by an observation, obs. variance or input. If the state name is
+  # already used by a state, then we allow to continue - it will
+  # then be overwritten in the add_systems method
+
 
   if (newvar %in% names(private$sys.eqs) & type!="state") {
     stop("The variable ", newvar, " is already in use (state).")
@@ -335,7 +352,7 @@ check_constants = function(form, self, private) {
 # CHECK MODEL CHANGES
 #######################################################
 
-did_model_change_after_build = function(self, private) {
+was_model_already_built = function(self, private) {
 
   if (private$build) {
     message("You changed the model. I will recompile on next call to $estimate. Use $set_compile(FALSE) to avoid.")

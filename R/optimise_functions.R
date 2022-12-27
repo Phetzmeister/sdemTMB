@@ -65,6 +65,14 @@ check_and_set_data = function(data, self, private) {
   private$ode.dt = diff(data$t)/private$ode.N
   private$ode.Ncumsum = c(0,cumsum(private$ode.N))
 
+  # TMB: So we don't need isNA with observations
+  iobs = list()
+  for (i in 1:private$m) {
+    # -1 because cpp is 0-indexed
+    iobs[[i]] = (1:length(data$t))[!is.na(private$data[[private$obs.names[i]]])] - 1
+  }
+  names(iobs) = paste("iobs_",private$obs.names,sep="")
+  private$iobs = iobs
   #
   return(invisible(self))
 }
@@ -82,18 +90,19 @@ if_method_is_tmb_add_states_to_parameters = function(self, private) {
   if (!is.null(private$tmb.initial.state)) {
     # repeat each state guess N times (except the last state value)
     for (i in 1:length(private$tmb.initial.state)) {
-      private$tmb.initial.state[[i]] = rep(private$tmb.initial.state[[i]],times=c(private$ode.N,1))
+      private$tmb.initial.state.for.parameters[[i]] =
+        rep(private$tmb.initial.state[[i]],times=c(private$ode.N,1))
     }
     return(invisible(self))
   }
 
-  message("No initial state values provided for TMB. I will use the provided
-          initial state values for all time points.")
+  message("No initial state values provided for TMB. I will use the provided initial state values for all time points.")
   # The number of states is sum(private$ode.N) + 1
   for (i in 1:private$n) {
-    private$tmb.initial.state[[i]] = rep(private$initial.state$mean[i],sum(private$ode.N)+1)
+    private$tmb.initial.state.for.parameters[[i]] =
+      rep(private$initial.state$mean[i],sum(private$ode.N)+1)
   }
-  names(private$tmb.initial.state) = private$state.names
+  names(private$tmb.initial.state.for.parameters) = private$state.names
 
   return(invisible(self))
 }
@@ -143,13 +152,14 @@ construct_and_optimise = function(self ,private) {
   .data3 = lapply(private$constants, function(x) x$rhs)
 
   # construct final data list
-  data = c( private$data , .data1, .data2, .data3)
+  data = c( private$data , .data1, private$iobs, .data2, .data3)
 
   ################################################
   # Parameters
   ################################################
 
-  parameters = c(private$tmb.initial.state, lapply(private$parameters, function(x) x$init))
+  parameters = c(private$tmb.initial.state.for.parameters,
+                 lapply(private$parameters, function(x) x$init))
 
   ################################################
   # Construct Neg. Log-Likelihood
@@ -424,7 +434,7 @@ create_return_fit = function(self, private) {
 
   }
 
-  class(private$fit) = "sdem"
+  class(private$fit) = "sdem.fit"
 
   return(invisible(self))
 }
