@@ -425,8 +425,8 @@ vector<Type> get_free_pars__(vector<int> mapints, int sum_mapints, vector<Type> 
   txt = c(txt, "\t\t }")
   txt = c(txt, "\t\t xPrior(i+1) = x0__;")
   txt = c(txt, "\t\t pPrior(i+1) = p0__;")
-  txt = c(txt, "\t\t xPriorPost(2*i+2) = x0__;")
-  txt = c(txt, "\t\t pPriorPost(2*i+2) = p0__;")
+  # txt = c(txt, "\t\t xPriorPost(2*i+2) = x0__;")
+  # txt = c(txt, "\t\t pPriorPost(2*i+2) = p0__;")
 
   ##################################################
   # Data Update

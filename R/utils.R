@@ -252,7 +252,7 @@ plot.sdem.fit = function(fit, plot.obs=1,use.ggplot=FALSE,extended=FALSE,ggtheme
         plot.acf,
         plot.cpgram
       )
-      # save plot
+      # store plot
       plots[[i]] = (plot.qq + plot.hist) / (plot.acf + plot.cpgram) +
         plot_annotation(title=paste("Residuals for ", nam),theme=ggtheme + ggplot2::theme(text=element_text("Avenir Next Condensed",size=18,face="bold")),)
     }
